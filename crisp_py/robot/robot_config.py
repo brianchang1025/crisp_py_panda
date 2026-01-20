@@ -124,6 +124,7 @@ class FrankaConfig(RobotConfig):
     target_frame: str = "fr3_hand_tcp"
     # target_frame: str = "fr3_link8"
 
+@dataclass
 class PandaConfig(RobotConfig):
     """Configuration specific to Franka Emika Panda robots.
     Provides default values for frame names, joint names, and home configuration
