@@ -171,6 +171,31 @@ class ControllerSwitcherClient:
 
         return True
     
-    def stop_controller(self, name: str):
-    # We pass the name to 'to_deactivate' and an empty list [] to 'to_activate'
-        return self._switch_controller(to_deactivate=[name], to_activate=[])
+    def deactivate_all_motion_controllers(self) -> bool:
+        
+        # 1. Get the current status of all controllers
+        controllers = self.get_controller_list()
+
+        active_controllers = [
+            controller.name for controller in controllers if controller.state == "active"
+        ]
+
+        # 2. Filter for controllers that are 'active' AND NOT a broadcaster
+        to_deactivate = []
+        for active_controller in active_controllers:
+            if not active_controller.endswith("broadcaster"):  # Do not deactivate broadcasters
+                to_deactivate.append(active_controller)
+
+        if not to_deactivate:
+            self.node.get_logger().info("No motion controllers are currently active.")
+            return True
+
+        self.node.get_logger().info(f"Deactivating motion controllers: {to_deactivate}")
+
+        # 3. Call the switch service to stop them (activate list is empty)
+        ok = self._switch_controller(to_deactivate, to_activate)
+        if not ok:
+            self.node.get_logger().error("Failed to deactivate motion controllers.")
+            raise RuntimeError("Failed to deactivate motion controllers.")
+
+        return True
