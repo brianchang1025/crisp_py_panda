@@ -170,3 +170,7 @@ class ControllerSwitcherClient:
             raise RuntimeError(f"Failed to switch to controller {controller_name}.")
 
         return True
+    
+    def stop_controller(self, name: str):
+    # We pass the name to 'to_deactivate' and an empty list [] to 'to_activate'
+        return self._switch_controller(to_deactivate=[name], to_activate=[])
