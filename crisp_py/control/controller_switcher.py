@@ -192,6 +192,7 @@ class ControllerSwitcherClient:
 
         self.node.get_logger().info(f"Deactivating motion controllers: {to_deactivate}")
 
+        to_activate = []  # No controllers to activate
         # 3. Call the switch service to stop them (activate list is empty)
         ok = self._switch_controller(to_deactivate, to_activate)
         if not ok:
