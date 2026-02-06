@@ -311,8 +311,10 @@ class Gripper:
 
         if block:
             self.reboot_client.call(Trigger.Request())
+            print("Gripper rebooted successfully.")
         else:
             self.reboot_client.call_async(Trigger.Request())
+            print("Gripper reboot command sent asynchronously.")
 
     def stop(self, block: bool = False):
         """this api is for manual control of the gripper, it will stop the gripper and allow free movement if the stop service is available.
