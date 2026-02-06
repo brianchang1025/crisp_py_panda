@@ -2,3 +2,4 @@ max_value: 0.08
 min_value: 0.0
 joint_state_topic: /gripper/joint_states
 command_topic: /gripper/gripper_position_controller/commands
+stop_service: "/panda_gripper/stop"
