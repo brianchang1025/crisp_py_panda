@@ -1,4 +1,4 @@
 joint_state_topic: /right/gripper/joint_states
 command_topic: /right/gripper/gripper_position_controller/commands
-max_value: 1.0
+max_value: 0.08
 min_value: 0.0
