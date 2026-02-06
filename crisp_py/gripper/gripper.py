@@ -250,16 +250,17 @@ class Gripper:
         if self._target is None:
             return
         msg = Float64MultiArray()
-        msg.data = [
-            self._unnormalize(
-                self.value
-                + np.clip(
-                    self._normalize(self._target) - self.value,
-                    -self.config.max_delta,
-                    self.config.max_delta,
-                )
-            )
-        ]
+        #msg.data = [
+            #self._unnormalize(
+                #self.value
+                #+ np.clip(
+                    #self._normalize(self._target) - self.value,
+                    #-self.config.max_delta,
+                    #self.config.max_delta,
+                #)
+            #)
+        #]
+        msg.data = [self._target]
         self._command_publisher.publish(msg)
 
     def _callback_joint_state(self, msg: JointState):
