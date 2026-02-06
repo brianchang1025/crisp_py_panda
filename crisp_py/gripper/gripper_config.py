@@ -20,6 +20,7 @@ class GripperConfig:
     command_topic: str = "gripper_position_controller/commands"
     joint_state_topic: str = "joint_states"
     reboot_service: str = "reboot_gripper"
+    stop_service: str = "stop"
     enable_torque_service: str = "dynamixel_hardware_interface/set_dxl_torque"
     index: int = 0
     publish_frequency: float = 30.0

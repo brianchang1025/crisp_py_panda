@@ -86,6 +86,7 @@ class Gripper:
         )
 
         self.reboot_client = self.node.create_client(Trigger, self.config.reboot_service)
+        self.stop_client = self.node.create_client(Trigger, self.config.stop_service)
         self.enable_torque_client = self.node.create_client(
             SetBool, self.config.enable_torque_service
         )
@@ -312,6 +313,21 @@ class Gripper:
             self.reboot_client.call(Trigger.Request())
         else:
             self.reboot_client.call_async(Trigger.Request())
+
+    def stop(self, block: bool = False):
+        """this api is for manual control of the gripper, it will stop the gripper and allow free movement if the stop service is available.
+        Args:
+            block: if block is set to True, then we wait until a response arrives.
+        """
+        if not self.stop_client.service_is_ready:
+            raise RuntimeError(
+                f"Trying to stop the client but the service {self.config.stop_service} is not available. Is the gripper running? Does your gripper support stopping?"
+            )
+
+        if block:
+            self.stop_client.call(Trigger.Request())
+        else:
+            self.stop_client.call_async(Trigger.Request())
 
     def enable_torque(self, block: bool = False):
         """Enable torque holding in the gripper.
