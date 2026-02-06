@@ -62,6 +62,7 @@ class GripperConfig:
                 ),
                 "joint_state_topic": config.get("joint_state_topic", "joint_states"),
                 "reboot_service": config.get("reboot_service", "reboot_gripper"),
+                "stop_service": config.get("stop_service", "stop"),
                 "enable_torque_service": config.get(
                     "enable_torque_service", "dynamixel_hardware_interface/set_dxl_torque"
                 ),

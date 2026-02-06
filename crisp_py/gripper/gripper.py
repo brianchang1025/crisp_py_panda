@@ -203,7 +203,7 @@ class Gripper:
                 self.node.get_logger().warn(f"{self._prefix}Gripper joint state is stale")
         except ValueError:
             pass
-        print(f"Unnormalized value: {self._value}")
+        #print(f"Unnormalized value: {self._value}")
         return np.clip(self._normalize(self._value), 0.0, 1.0)
 
     @property
@@ -328,8 +328,10 @@ class Gripper:
 
         if block:
             self.stop_client.call(Trigger.Request())
+            print("Gripper stopped successfully.")
         else:
             self.stop_client.call_async(Trigger.Request())
+            print("Gripper stop command sent asynchronously.")
 
     def enable_torque(self, block: bool = False):
         """Enable torque holding in the gripper.
