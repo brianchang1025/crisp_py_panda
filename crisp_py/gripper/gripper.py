@@ -273,7 +273,7 @@ class Gripper:
         """Open the gripper."""
         self.set_target(target=1.0)
 
-    def closing_state(self) -> bool:
+    def closing_state(self) -> bool | None:
         """Returns True if the gripper is currently closing."""
         if self._closing_state is None:
             raise RuntimeError(
@@ -345,7 +345,7 @@ class Gripper:
         Args:
             is_closing (bool): whether the gripper should be closing or opening.
         """
-        self._is_closing = is_closing
+        self._is_closing = bool(is_closing)
 
     def _normalize(self, unormalized_value: float) -> float:
         """Normalize a raw value between 0.0 and 1.0."""
