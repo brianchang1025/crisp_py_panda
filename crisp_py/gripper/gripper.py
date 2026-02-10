@@ -105,6 +105,14 @@ class Gripper:
             ReentrantCallbackGroup(),
         )
 
+        self.node.create_timer(
+            1.0 / self.config.publish_frequency,
+            self._callback_monitor.monitor(
+                f"{namespace.capitalize()} Gripper Closing State Publisher", self._callback_publish_closing
+            ),
+            ReentrantCallbackGroup(),
+        )
+
         self.reboot_client = self.node.create_client(Trigger, self.config.reboot_service)
         self.stop_client = self.node.create_client(Trigger, self.config.stop_service)
         self.enable_torque_client = self.node.create_client(
