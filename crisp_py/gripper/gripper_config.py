@@ -18,7 +18,9 @@ class GripperConfig:
     min_value: float
     max_value: float
     command_topic: str = "gripper_position_controller/commands"
+    closing_command_topic: str = "gripper_closing_controller/commands"
     joint_state_topic: str = "joint_states"
+    closing_state_topic: str = "closing_state"
     reboot_service: str = "reboot_gripper"
     stop_service: str = "stop"
     enable_torque_service: str = "dynamixel_hardware_interface/set_dxl_torque"
@@ -60,7 +62,11 @@ class GripperConfig:
                 "command_topic": config.get(
                     "command_topic", "gripper_position_controller/commands"
                 ),
+                "closing_command_topic": config.get(
+                    "closing_command_topic", "gripper_closing_controller/commands"
+                ),
                 "joint_state_topic": config.get("joint_state_topic", "joint_states"),
+                "closing_state_topic": config.get("closing_state_topic", "closing_state"),
                 "reboot_service": config.get("reboot_service", "reboot_gripper"),
                 "stop_service": config.get("stop_service", "stop"),
                 "enable_torque_service": config.get(

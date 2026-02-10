@@ -10,7 +10,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import qos_profile_system_default
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64MultiArray, Bool
 from std_srvs.srv import SetBool, Trigger
 
 from crisp_py.config.path import find_config, list_configs_in_folder
@@ -55,6 +55,8 @@ class Gripper:
         self._prefix = f"{namespace}_" if namespace else ""
         self._value = None
         self._torque = None
+        self._closing_state = None
+        self._is_closing = None
         self._target = None
         self._index = self.config.index
         self._callback_monitor = CallbackMonitor(
@@ -67,11 +69,29 @@ class Gripper:
             qos_profile_system_default,
             callback_group=ReentrantCallbackGroup(),
         )
+
+        self._closing_command_publisher = self.node.create_publisher(
+            Bool,
+            self.config.closing_command_topic,
+            qos_profile_system_default,
+            callback_group=ReentrantCallbackGroup(),
+        )
+
         self._joint_subscriber = self.node.create_subscription(
             JointState,
             self.config.joint_state_topic,
             self._callback_monitor.monitor(
                 f"{namespace.capitalize()} Gripper Joint State", self._callback_joint_state
+            ),
+            qos_profile_system_default,
+            callback_group=ReentrantCallbackGroup(),
+        )
+
+        self._closing_subscriber = self.node.create_subscription(
+            Bool,
+            self.config.closing_state_topic,
+            self._callback_monitor.monitor(
+                f"{namespace.capitalize()} Gripper Closing State", self._callback_closing_state
             ),
             qos_profile_system_default,
             callback_group=ReentrantCallbackGroup(),
@@ -231,7 +251,7 @@ class Gripper:
                     f"Timeout waiting for gripper to be ready.\n Is the gripper topic {self._joint_subscriber.topic_name} being published?"
                 )
 
-    def is_open(self, open_threshold: float = 0.1) -> bool:
+    def is_open(self, open_threshold: float = 0.85) -> bool:
         """Returns True if the gripper is open."""
         if self.value is None:
             raise RuntimeError("Gripper value is not initialized. Call wait_until_ready() first.")
@@ -244,6 +264,15 @@ class Gripper:
     def open(self):
         """Open the gripper."""
         self.set_target(target=1.0)
+
+    def closing_state(self) -> bool:
+        """Returns True if the gripper is currently closing."""
+        if self._closing_state is None:
+            raise RuntimeError(
+                "Gripper closing state is not initialized. Call wait_until_ready() first."
+            )
+        return self._closing_state
+
 
     def _callback_publish_target(self):
         """Publish the target command."""
@@ -263,6 +292,14 @@ class Gripper:
         msg.data = [self._target]
         self._command_publisher.publish(msg)
 
+    def _callback_publish_closing(self):
+        """Publish the closing state command."""
+        if self._is_closing is None:
+            return
+        msg = Bool()
+        msg.data = self._is_closing
+        self._closing_command_publisher.publish(msg)
+
     def _callback_joint_state(self, msg: JointState):
         """Save the latest joint state values.
 
@@ -273,6 +310,14 @@ class Gripper:
         """
         self._value = msg.position[self._index]
         self._torque = msg.effort[self._index] if msg.effort else None
+
+    def _callback_closing_state(self, msg: Bool):
+        """Save the latest closing state.
+
+        Args:
+            msg (Bool): the message containing the closing state.
+        """
+        self._closing_state = msg.data
 
     def set_target(self, target: float, *, epsilon: float = 0.1):
         """Grasp with the gripper by setting a target. This can be a position, velocity or effort depending on the active controller.
@@ -285,6 +330,14 @@ class Gripper:
             f"The target should be normalized between 0 and 1, but is currently {target}"
         )
         self._target = self._unnormalize(target)
+    
+    def set_gripper_state(self, is_closing: bool):
+        """Set the gripper state to open or close.
+
+        Args:
+            is_closing (bool): whether the gripper should be closing or opening.
+        """
+        self._is_closing = is_closing
 
     def _normalize(self, unormalized_value: float) -> float:
         """Normalize a raw value between 0.0 and 1.0."""

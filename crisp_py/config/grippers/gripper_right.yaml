@@ -1,5 +1,7 @@
 joint_state_topic: /right/gripper/joint_states
-command_topic: /right/gripper/gripper_position_controller/commands
+closing_state_topic: /right/gripper/closing_state
+command_topic: /right/gripper/gripper_position_controller/commands\
+closing_command_topic: /right/gripper/gripper_closing_controller/commands
 stop_service: "/right/panda_gripper/stop"
 max_value: 0.08
 min_value: 0.0
