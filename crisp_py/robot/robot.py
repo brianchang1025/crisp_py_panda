@@ -96,6 +96,7 @@ class Robot:
         self._target_wrench = None
         self._current_twist = None
         self._tf_pose = None
+        self._current_robot_mode = None
 
         self._callback_monitor = CallbackMonitor(
             node=self.node,
@@ -390,6 +391,12 @@ class Robot:
                 error_msg += f"or {self.config.current_joint_topic} is not publishing joint states."
 
                 raise TimeoutError(error_msg)
+    
+    def check_reflex(self):
+        """Check if the robot is in reflex mode and raise an exception if it is."""
+        if self._current_robot_mode == 4:
+            error_msg = f"The {self.config.current_robot_mode_topic} has entered reflex mode due to a collision or safety event. Current robot mode: 4 (Reflex/Collision)."
+            raise RobotReflexException(error_msg)
 
     def set_target(self, position: List | NDArray | None = None, pose: Pose | None = None):
         """Set the target pose for the end-effector.
@@ -539,8 +546,8 @@ class Robot:
         Args:
             msg (Int32): ROS message containing the current robot mode.
         """
-        if msg.data == 4:  # Mode 4 is Reflex/Collision mode for Franka
-            raise RobotReflexException("The robot has entered Reflex/Collision mode!")
+        self._current_robot_mode = msg.data
+        
 
     def move_to(
         self, position: List | NDArray | None = None, pose: Pose | None = None, speed: float = 0.05
