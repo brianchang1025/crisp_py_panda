@@ -392,11 +392,14 @@ class Robot:
 
                 raise TimeoutError(error_msg)
     
-    def check_reflex(self):
+    def robot_mode_monitor(self):
         """Check if the robot is in reflex mode and raise an exception if it is."""
         if self._current_robot_mode == 4:
-            error_msg = f"The {self.config.current_robot_mode_topic} has entered reflex mode due to a collision or safety event. Current robot mode: 4 (Reflex/Collision)."
-            raise RobotReflexException(error_msg)
+            error_msg = f"{self.config.current_robot_mode_topic} has entered REFLEX mode due to a collision or safety event. Current robot mode: 4 (Reflex)."
+            raise RuntimeError(error_msg)
+        elif self._current_robot_mode == 5:
+            error_msg = f"{self.config.current_robot_mode_topic} has entered USER_STOPPED mode due to the activation of emergency button. Current robot mode: 5 (User Stopped)."
+            raise RuntimeError(error_msg)
 
     def set_target(self, position: List | NDArray | None = None, pose: Pose | None = None):
         """Set the target pose for the end-effector.
