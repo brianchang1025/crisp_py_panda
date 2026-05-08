@@ -15,16 +15,20 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data, qos_profile_system_default
 from scipy.spatial.transform import Rotation, Slerp
 from sensor_msgs.msg import JointState
+from std_msgs.msg import Int32
 
 from crisp_py.config.path import find_config, list_configs_in_folder
 from crisp_py.control.controller_switcher import ControllerSwitcherClient
 from crisp_py.control.joint_trajectory_controller_client import JointTrajectoryControllerClient
 from crisp_py.control.parameters_client import ParametersClient
-from crisp_py.robot.robot_config import FrankaConfig, RobotConfig, make_robot_config
+from crisp_py.robot.robot_config import FrankaConfig, PandaConfig, RobotConfig, make_robot_config
 from crisp_py.utils.callback_monitor import CallbackMonitor
 from crisp_py.utils.geometry import Pose, Twist
 from crisp_py.utils.tf_pose import TfPose
 
+class RobotReflexException(Exception):
+    """Exception raised when the Franka robot enters Mode 4 (Reflex/Collision)."""
+    pass
 
 class Robot:
     """A high-level interface for controlling robots using ROS2.
@@ -70,7 +74,7 @@ class Robot:
             )
         else:
             self.node = node
-        self.config = robot_config if robot_config else FrankaConfig()
+        self.config = robot_config if robot_config else PandaConfig()
 
         self._prefix = f"{namespace}_" if namespace and self.config.use_prefix else ""
 
@@ -97,6 +101,8 @@ class Robot:
             node=self.node,
             stale_threshold=max(self.config.max_pose_delay, self.config.max_joint_delay),
         )
+        
+        
 
         self._target_pose_publisher = self.node.create_publisher(
             PoseStamped, self.config.target_pose_topic, qos_profile_system_default
@@ -139,6 +145,16 @@ class Robot:
             self.config.current_twist_topic,
             self._callback_monitor.monitor(
                 f"{namespace.capitalize()} Current Twist", self._callback_current_twist
+            ),
+            qos_profile_sensor_data,
+            callback_group=ReentrantCallbackGroup(),
+        )
+        
+        self.node.create_subscription(
+            Int32,
+            self.config.current_robot_mode_topic,
+            self._callback_monitor.monitor(
+                f"{namespace.capitalize()} Current Robot Mode", self._callback_current_robot_mode
             ),
             qos_profile_sensor_data,
             callback_group=ReentrantCallbackGroup(),
@@ -513,6 +529,18 @@ class Robot:
 
         if self._target_joint is None:
             self._target_joint = self._current_joint.copy()
+            
+    def _callback_current_robot_mode(self, msg: Int32):
+        """Monitor the robot mode and raise an exception if it enters reflex mode.
+
+        This callback is triggered when a new robot mode message is received. If the robot
+        enters Mode 4 (Reflex/Collision), a RobotReflexException is raised.
+
+        Args:
+            msg (Int32): ROS message containing the current robot mode.
+        """
+        if msg.data == 4:  # Mode 4 is Reflex/Collision mode for Franka
+            raise RobotReflexException("The robot has entered Reflex/Collision mode!")
 
     def move_to(
         self, position: List | NDArray | None = None, pose: Pose | None = None, speed: float = 0.05

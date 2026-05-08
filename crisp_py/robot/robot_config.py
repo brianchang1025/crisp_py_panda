@@ -49,6 +49,7 @@ class RobotConfig:
     current_pose_topic: str = "current_pose"
     current_joint_topic: str = "joint_states"
     current_twist_topic: str = "current_twist"
+    current_robot_mode_topic: str = "robot_mode"
 
     publish_frequency: float = 50.0
     time_to_home: float = 5.0
