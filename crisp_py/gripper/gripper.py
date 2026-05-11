@@ -45,7 +45,7 @@ class Gripper:
 
         self.node = (
             rclpy.create_node(
-                node_name="gripper_client", namespace=namespace, parameter_overrides=[]
+                node_name="crisp_py_gripper_client", namespace=namespace, parameter_overrides=[]
             )
             if not node
             else node
