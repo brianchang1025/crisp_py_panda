@@ -5,6 +5,8 @@ import threading
 import numpy as np
 import rclpy
 import yaml
+# from control_msgs.action import GripperCommand
+# from rclpy.action.client import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -55,26 +57,35 @@ class Gripper:
         self._prefix = f"{namespace}_" if namespace else ""
         self._value = None
         self._torque = None
-        self._closing_state = None
-        self._is_closing = None
+        self._current_status = None
+        
         self._target = None
+        self._target_status = None
         self._index = self.config.index
         self._callback_monitor = CallbackMonitor(
             self.node, stale_threshold=self.config.max_joint_delay
         )
 
-        self._command_publisher = self.node.create_publisher(
-            Float64MultiArray,
-            self.config.command_topic,
-            qos_profile_system_default,
-            callback_group=ReentrantCallbackGroup(),
+        self._position_command_publisher = (
+            self.node.create_publisher(
+                Float64MultiArray,
+                self.config.position_command_topic,
+                qos_profile_system_default,
+                callback_group=ReentrantCallbackGroup(),
+            )
+            if not self.config.use_binary_status_control
+            else None
         )
-
-        self._closing_command_publisher = self.node.create_publisher(
-            Bool,
-            self.config.closing_command_topic,
-            qos_profile_system_default,
-            callback_group=ReentrantCallbackGroup(),
+        
+        self._status_command_publisher = (
+            self.node.create_publisher(
+                Bool,
+                self.config.status_command_topic,
+                qos_profile_system_default,
+                callback_group=ReentrantCallbackGroup(),
+            )
+            if self.config.use_binary_status_control
+            else None
         )
 
         self._joint_subscriber = self.node.create_subscription(
@@ -87,15 +98,15 @@ class Gripper:
             callback_group=ReentrantCallbackGroup(),
         )
 
-        self._closing_subscriber = self.node.create_subscription(
-            Bool,
-            self.config.closing_state_topic,
-            self._callback_monitor.monitor(
-                f"{namespace.capitalize()} Gripper Closing State", self._callback_closing_state
-            ),
-            qos_profile_system_default,
-            callback_group=ReentrantCallbackGroup(),
-        )
+        # self._status_subscriber = self.node.create_subscription(
+        #     Bool,
+        #     self.config.open_close_state_topic,
+        #     self._callback_monitor.monitor(
+        #         f"{namespace.capitalize()} Gripper Status State", self._callback_open_close_state
+        #     ),
+        #     qos_profile_system_default,
+        #     callback_group=ReentrantCallbackGroup(),
+        # )
 
         self.node.create_timer(
             1.0 / self.config.publish_frequency,
@@ -108,13 +119,12 @@ class Gripper:
         self.node.create_timer(
             1.0 / self.config.publish_frequency,
             self._callback_monitor.monitor(
-                f"{namespace.capitalize()} Gripper Closing State Publisher", self._callback_publish_closing
+                f"{namespace.capitalize()} Gripper Open/Close State Publisher", self._callback_publish_open_close_state
             ),
             ReentrantCallbackGroup(),
         )
 
         self.reboot_client = self.node.create_client(Trigger, self.config.reboot_service)
-        self.stop_client = self.node.create_client(Trigger, self.config.stop_service)
         self.enable_torque_client = self.node.create_client(
             SetBool, self.config.enable_torque_service
         )
@@ -243,10 +253,21 @@ class Gripper:
     def target(self) -> float:
         """Returns the target value of the gripper."""
         return np.clip(self._normalize(self._target), 0.0, 1.0)
+    
+    @property
+    def current_status(self) -> bool | None:
+        """Returns True if the gripper is currently closing."""
+        if self._current_status is None:
+            raise RuntimeError(
+                "Gripper current status is not initialized. Call wait_until_ready() first."
+            )
+        return self._current_status
 
     def is_ready(self) -> bool:
         """Returns True if the gripper is fully ready to operate."""
-        return self._value is not None
+        
+        return self._value is not None and self._current_status is not None
+
 
     def wait_until_ready(self, timeout: float = 10.0, check_frequency: float = 10.0):
         """Wait until the gripper is available."""
@@ -260,26 +281,29 @@ class Gripper:
                 )
 
     def is_open(self, open_threshold: float = 0.85) -> bool:
-        """Returns True if the gripper is open."""
+            # Threshold check: Checks if width is "open enough"
         if self.value is None:
-            raise RuntimeError("Gripper value is not initialized. Call wait_until_ready() first.")
+            raise RuntimeError("Gripper value is not initialized.")
         return self.value > open_threshold
+    
+    def is_closed(self) -> bool:
+        return not self.is_open()
 
     def close(self):
         """Close the gripper."""
-        self.set_target(target=0.0)
+        if self.config.use_binary_status_control:
+            self.set_target_status(status=True) # True to close the gripper, False to open it.
+        else:
+            self.set_target(target=0.0)
 
     def open(self):
         """Open the gripper."""
-        self.set_target(target=1.0)
+        if self.config.use_binary_status_control:
+            self.set_target_status(status=False) # True to close the gripper, False to open it.
+        else:
+            self.set_target(target=1.0)
 
-    def closing_state(self) -> bool | None:
-        """Returns True if the gripper is currently closing."""
-        if self._closing_state is None:
-            raise RuntimeError(
-                "Gripper closing state is not initialized. Call wait_until_ready() first."
-            )
-        return self._closing_state
+    
 
 
     def _callback_publish_target(self):
@@ -287,26 +311,26 @@ class Gripper:
         if self._target is None:
             return
         msg = Float64MultiArray()
-        #msg.data = [
-            #self._unnormalize(
-                #self.value
-                #+ np.clip(
-                    #self._normalize(self._target) - self.value,
-                    #-self.config.max_delta,
-                    #self.config.max_delta,
-                #)
-            #)
-        #]
+        msg.data = [
+            self._unnormalize(
+                self.value
+                + np.clip(
+                    self._normalize(self._target) - self.value,
+                    -self.config.max_delta,
+                    self.config.max_delta,
+                )
+            )
+        ]
         msg.data = [self._target]
-        self._command_publisher.publish(msg)
+        self._position_command_publisher.publish(msg)
 
-    def _callback_publish_closing(self):
-        """Publish the closing state command."""
-        if self._is_closing is None:
+    def _callback_publish_open_close_state(self):
+        """Publish the open/close state command."""
+        if self._target_status is None:
             return
         msg = Bool()
-        msg.data = self._is_closing
-        self._closing_command_publisher.publish(msg)
+        msg.data = self._target_status
+        self._status_command_publisher.publish(msg)
 
     def _callback_joint_state(self, msg: JointState):
         """Save the latest joint state values.
@@ -318,14 +342,15 @@ class Gripper:
         """
         self._value = msg.position[self._index]
         self._torque = msg.effort[self._index] if msg.effort else None
+        self._current_status = self.is_closed() # True if the gripper is closed, False if it is open, None if it is in between
 
-    def _callback_closing_state(self, msg: Bool):
-        """Save the latest closing state.
+    # def _callback_open_close_state(self, msg: Bool):
+    #     """Save the latest open/close state.
 
-        Args:
-            msg (Bool): the message containing the closing state.
-        """
-        self._closing_state = msg.data
+    #     Args:
+    #         msg (Bool): the message containing the closing state.
+    #     """
+    #     self._current_status = msg.data
 
     def set_target(self, target: float, *, epsilon: float = 0.1):
         """Grasp with the gripper by setting a target. This can be a position, velocity or effort depending on the active controller.
@@ -339,13 +364,14 @@ class Gripper:
         )
         self._target = self._unnormalize(target)
     
-    def set_gripper_state(self, is_closing: bool):
+    def set_target_status(self, status: bool):
         """Set the gripper state to open or close.
 
         Args:
-            is_closing (bool): whether the gripper should be closing or opening.
+            status (bool): whether the gripper should be closed or open.
+            close: if True, the gripper will try to close. If False, the gripper will try to open.
         """
-        self._is_closing = bool(is_closing)
+        self._target_status = bool(status)
 
     def _normalize(self, unormalized_value: float) -> float:
         """Normalize a raw value between 0.0 and 1.0."""
@@ -377,23 +403,6 @@ class Gripper:
         else:
             self.reboot_client.call_async(Trigger.Request())
             print("Gripper reboot command sent asynchronously.")
-
-    def stop(self, block: bool = False):
-        """this api is for manual control of the gripper, it will stop the gripper and allow free movement if the stop service is available.
-        Args:
-            block: if block is set to True, then we wait until a response arrives.
-        """
-        if not self.stop_client.service_is_ready:
-            raise RuntimeError(
-                f"Trying to stop the client but the service {self.config.stop_service} is not available. Is the gripper running? Does your gripper support stopping?"
-            )
-
-        if block:
-            self.stop_client.call(Trigger.Request())
-            print("Gripper stopped successfully.")
-        else:
-            self.stop_client.call_async(Trigger.Request())
-            print("Gripper stop command sent asynchronously.")
 
     def enable_torque(self, block: bool = False):
         """Enable torque holding in the gripper.

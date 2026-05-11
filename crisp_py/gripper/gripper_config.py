@@ -17,10 +17,10 @@ class GripperConfig:
 
     min_value: float
     max_value: float
-    command_topic: str = "gripper_position_controller/commands"
-    closing_command_topic: str = "gripper_closing_controller/commands"
+    position_command_topic: str = "gripper_position_controller/commands"
+    status_command_topic: str = "gripper_status_controller/commands"
     joint_state_topic: str = "joint_states"
-    closing_state_topic: str = "closing_state"
+    # open_close_state_topic: str = "open_close_state"
     reboot_service: str = "reboot_gripper"
     stop_service: str = "stop"
     enable_torque_service: str = "dynamixel_hardware_interface/set_dxl_torque"
@@ -28,6 +28,7 @@ class GripperConfig:
     publish_frequency: float = 30.0
     max_joint_delay: float = 1.0
     max_delta: float = 0.1
+    use_binary_status_control: bool = True
 
     @classmethod
     def from_yaml(cls, path: str | Path, **overrides) -> "GripperConfig":  # noqa: ANN003
@@ -59,14 +60,14 @@ class GripperConfig:
             config_data = {
                 "min_value": config.get("min_value", 0.0),
                 "max_value": config.get("max_value", 1.0),
-                "command_topic": config.get(
-                    "command_topic", "gripper_position_controller/commands"
+                "position_command_topic": config.get(
+                    "position_command_topic", "gripper_position_controller/commands"
                 ),
-                "closing_command_topic": config.get(
-                    "closing_command_topic", "gripper_closing_controller/commands"
+                "status_command_topic": config.get(
+                    "status_command_topic", "gripper_status_controller/commands"
                 ),
                 "joint_state_topic": config.get("joint_state_topic", "joint_states"),
-                "closing_state_topic": config.get("closing_state_topic", "closing_state"),
+                # "closing_state_topic": config.get("closing_state_topic", "closing_state"),
                 "reboot_service": config.get("reboot_service", "reboot_gripper"),
                 "stop_service": config.get("stop_service", "stop"),
                 "enable_torque_service": config.get(
