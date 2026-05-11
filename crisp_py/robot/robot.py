@@ -77,6 +77,8 @@ class Robot:
         self.config = robot_config if robot_config else PandaConfig()
 
         self._prefix = f"{namespace}_" if namespace and self.config.use_prefix else ""
+        
+        self.namespace = namespace
 
         self.controller_switcher_client = ControllerSwitcherClient(self.node)
         self.joint_trajectory_controller_client = JointTrajectoryControllerClient(
@@ -333,7 +335,7 @@ class Robot:
         """
         if self._current_twist is None:
             raise RuntimeError(
-                f"The robot has not received any twists yet. Is the current_twist_topic {self.config.current_twist_topic} correct?"
+                f"The robot has not received any twists yet. Is the current_twist_topic {self.namespace}/{self.config.current_twist_topic} correct?"
             )
         return self._current_twist.copy()
 
@@ -384,21 +386,21 @@ class Robot:
             if timeout <= 0:
                 error_msg = "Timeout waiting for robot to be available.\n"
                 error_msg += (
-                    f"Either {self.config.current_pose_topic} is not publishing poses\n"
+                    f"Either {self.namespace}/{self.config.current_pose_topic} is not publishing poses\n"
                     if not self.config.use_tf_pose
                     else f"Either TF is not publishing the transform from {self.config.base_frame} to {self.config.target_frame}\n"
                 )
-                error_msg += f"or {self.config.current_joint_topic} is not publishing joint states."
+                error_msg += f"or {self.namespace}/{self.config.current_joint_topic} is not publishing joint states."
 
                 raise TimeoutError(error_msg)
     
     def robot_mode_monitor(self):
         """Check if the robot is in reflex mode and raise an exception if it is."""
         if self._current_robot_mode == 4:
-            error_msg = f"{self.config.current_robot_mode_topic} has entered REFLEX mode due to a collision or safety event. Current robot mode: 4 (Reflex)."
+            error_msg = f"{self.namespace}/{self.config.current_robot_mode_topic} has entered REFLEX mode due to a collision or safety event. Current robot mode: 4 (Reflex)."
             raise RuntimeError(error_msg)
         elif self._current_robot_mode == 5:
-            error_msg = f"{self.config.current_robot_mode_topic} has entered USER_STOPPED mode due to the activation of emergency button. Current robot mode: 5 (User Stopped)."
+            error_msg = f"{self.namespace}/{self.config.current_robot_mode_topic} has entered USER_STOPPED mode due to the activation of emergency button. Current robot mode: 5 (User Stopped)."
             raise RuntimeError(error_msg)
 
     def set_target(self, position: List | NDArray | None = None, pose: Pose | None = None):
