@@ -5,8 +5,7 @@ import threading
 import numpy as np
 import rclpy
 import yaml
-from control_msgs.action import GripperCommand
-from rclpy.action.client import ActionClient
+
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -66,15 +65,6 @@ class Gripper:
             self.node, stale_threshold=self.config.max_joint_delay
         )
         
-        #use the action client to control open and close in the open() and close() methods
-        self._action_command_client = (
-            ActionClient(
-                self.node,
-                GripperCommand,
-                self.config.action_command_topic,
-                callback_group=ReentrantCallbackGroup(),
-            )
-        )
 
         self._position_command_publisher = (
             self.node.create_publisher(
@@ -275,9 +265,8 @@ class Gripper:
 
     def is_ready(self) -> bool:
         """Returns True if the gripper is fully ready to operate."""
-        action_client_ready = self._action_command_client.wait_for_server(timeout_sec=0.0)
         
-        return self._value is not None and self._current_status is not None and action_client_ready
+        return self._value is not None and self._current_status is not None 
 
 
     def wait_until_ready(self, timeout: float = 10.0, check_frequency: float = 10.0):
@@ -302,30 +291,24 @@ class Gripper:
 
     def close(self):
         """Close the gripper."""
-        # if self.config.use_binary_status_control:
-        #     self.set_target_status(status=True)
-        #     self._target_status = None # True to close the gripper, False to open it.
-        # else:
-        #     self.set_target(target=0.0)
-        if self._action_command_client.wait_for_server(timeout_sec=0.0):
-            goal_msg = GripperCommand.Goal()
-            goal_msg.command.position = self.config.max_value
-            goal_msg.command.max_effort = self.config.max_effort  # Use default max effort
-            self._action_command_client.send_goal_async(goal_msg)
+        if self.config.use_binary_status_control:
+            msg = Bool()
+            msg.data = True
+            self._status_command_publisher.publish(msg)
+            # True to close the gripper, False to open it.
+        else:
+            self.set_target(target=0.0)
+        
 
     def open(self):
         """Open the gripper."""
-        # if self.config.use_binary_status_control:
-        #     self.set_target_status(status=False)
-        #     self._target_status = None# True to close the gripper, False to open it.
-        # else:
-        #     self.set_target(target=1.0)
-        if self._action_command_client.wait_for_server(timeout_sec=0.0):
-            goal_msg = GripperCommand.Goal()
-            goal_msg.command.position = self.config.min_value
-            goal_msg.command.max_effort = self.config.max_effort  # Use default max effort
-            self._action_command_client.send_goal_async(goal_msg)
-
+        if self.config.use_binary_status_control:
+            msg = Bool()
+            msg.data = False
+            self._status_command_publisher.publish(msg)
+            # True to close the gripper, False to open it.
+        else:
+            self.set_target(target=1.0)
     
     def _callback_publish_target(self):
         """Publish the target command."""
