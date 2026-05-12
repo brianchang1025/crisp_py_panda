@@ -275,7 +275,7 @@ class Gripper:
 
     def is_ready(self) -> bool:
         """Returns True if the gripper is fully ready to operate."""
-        action_client_ready = self._action_command_client.wait_for_server(timeout_sec=1.0)
+        action_client_ready = self._action_command_client.wait_for_server(timeout_sec=0.0)
         
         return self._value is not None and self._current_status is not None and action_client_ready
 
@@ -307,7 +307,7 @@ class Gripper:
         #     self._target_status = None # True to close the gripper, False to open it.
         # else:
         #     self.set_target(target=0.0)
-        if self._action_command_client.wait_for_server(timeout_sec=1.0):
+        if self._action_command_client.wait_for_server(timeout_sec=0.0):
             goal_msg = GripperCommand.Goal()
             goal_msg.command.position = self.config.max_value
             goal_msg.command.max_effort = self.config.max_effort  # Use default max effort
@@ -320,7 +320,7 @@ class Gripper:
         #     self._target_status = None# True to close the gripper, False to open it.
         # else:
         #     self.set_target(target=1.0)
-        if self._action_command_client.wait_for_server(timeout_sec=1.0):
+        if self._action_command_client.wait_for_server(timeout_sec=0.0):
             goal_msg = GripperCommand.Goal()
             goal_msg.command.position = self.config.min_value
             goal_msg.command.max_effort = self.config.max_effort  # Use default max effort
