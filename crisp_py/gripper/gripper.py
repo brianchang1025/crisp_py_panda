@@ -98,15 +98,15 @@ class Gripper:
             callback_group=ReentrantCallbackGroup(),
         )
 
-        # self._status_subscriber = self.node.create_subscription(
-        #     Bool,
-        #     self.config.open_close_state_topic,
-        #     self._callback_monitor.monitor(
-        #         f"{namespace.capitalize()} Gripper Status State", self._callback_open_close_state
-        #     ),
-        #     qos_profile_system_default,
-        #     callback_group=ReentrantCallbackGroup(),
-        # )
+        self._status_subscriber = self.node.create_subscription(
+            Bool,
+            self.config.open_close_state_topic,
+            self._callback_monitor.monitor(
+                f"{namespace.capitalize()} Gripper Status State", self._callback_open_close_state
+            ),
+            qos_profile_system_default,
+            callback_group=ReentrantCallbackGroup(),
+        )
 
         self.node.create_timer(
             1.0 / self.config.publish_frequency,
@@ -119,7 +119,7 @@ class Gripper:
         self.node.create_timer(
             1.0 / self.config.publish_frequency,
             self._callback_monitor.monitor(
-                f"{namespace.capitalize()} Gripper Open/Close State Publisher", self._callback_publish_open_close_state
+                f"{namespace.capitalize()} Gripper Target Status Publisher", self._callback_publish_target_status
             ),
             ReentrantCallbackGroup(),
         )
@@ -292,20 +292,20 @@ class Gripper:
     def close(self):
         """Close the gripper."""
         if self.config.use_binary_status_control:
-            self.set_target_status(status=True) # True to close the gripper, False to open it.
+            self.set_target_status(status=True)
+            self._target_status = None # True to close the gripper, False to open it.
         else:
             self.set_target(target=0.0)
 
     def open(self):
         """Open the gripper."""
         if self.config.use_binary_status_control:
-            self.set_target_status(status=False) # True to close the gripper, False to open it.
+            self.set_target_status(status=False)
+            self._target_status = None# True to close the gripper, False to open it.
         else:
             self.set_target(target=1.0)
 
     
-
-
     def _callback_publish_target(self):
         """Publish the target command."""
         if self._target is None:
@@ -324,7 +324,7 @@ class Gripper:
         msg.data = [self._target]
         self._position_command_publisher.publish(msg)
 
-    def _callback_publish_open_close_state(self):
+    def _callback_publish_target_status(self):
         """Publish the open/close state command."""
         if self._target_status is None:
             return
@@ -342,15 +342,14 @@ class Gripper:
         """
         self._value = msg.position[self._index]
         self._torque = msg.effort[self._index] if msg.effort else None
-        self._current_status = self.is_closed() # True if the gripper is closed, False if it is open, None if it is in between
+        
+    def _callback_open_close_state(self, msg: Bool):
+        """Save the latest open/close state.
 
-    # def _callback_open_close_state(self, msg: Bool):
-    #     """Save the latest open/close state.
-
-    #     Args:
-    #         msg (Bool): the message containing the closing state.
-    #     """
-    #     self._current_status = msg.data
+        Args:
+            msg (Bool): the message containing the closing state.
+        """
+        self._current_status = msg.data
 
     def set_target(self, target: float, *, epsilon: float = 0.1):
         """Grasp with the gripper by setting a target. This can be a position, velocity or effort depending on the active controller.
