@@ -17,7 +17,7 @@ class GripperConfig:
 
     min_value: float
     max_value: float
-    action_command_topic: str = "gripper_position_controller/commands"
+    
     position_command_topic: str = "gripper_position_commands"
     status_command_topic: str = "gripper_status_commands"
     joint_state_topic: str = "joint_states"
@@ -29,7 +29,7 @@ class GripperConfig:
     max_joint_delay: float = 1.0
     max_delta: float = 0.1
     use_binary_status_control: bool = True
-    max_effort: float = 10.0
+   
 
     @classmethod
     def from_yaml(cls, path: str | Path, **overrides) -> "GripperConfig":  # noqa: ANN003
@@ -61,9 +61,6 @@ class GripperConfig:
             config_data = {
                 "min_value": config.get("min_value", 0.0),
                 "max_value": config.get("max_value", 1.0),
-                "action_command_topic": config.get(
-                    "command_topic", "gripper_position_controller/commands"
-                ),
                 "position_command_topic": config.get(
                     "position_command_topic", "gripper_position_commands"
                 ),
@@ -73,7 +70,6 @@ class GripperConfig:
                 "joint_state_topic": config.get("joint_state_topic", "joint_states"),
                 "open_close_state_topic": config.get("open_close_state_topic", "open_close_states"),
                 "reboot_service": config.get("reboot_service", "reboot_gripper"),
-                "stop_service": config.get("stop_service", "stop"),
                 "enable_torque_service": config.get(
                     "enable_torque_service", "dynamixel_hardware_interface/set_dxl_torque"
                 ),
