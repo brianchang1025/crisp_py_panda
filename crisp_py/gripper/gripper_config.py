@@ -17,12 +17,12 @@ class GripperConfig:
 
     min_value: float
     max_value: float
-    position_command_topic: str = "gripper_position_controller/commands"
-    status_command_topic: str = "gripper_status_controller/commands"
+    action_command_topic: str = "gripper_position_controller/commands"
+    position_command_topic: str = "gripper_position_commands"
+    status_command_topic: str = "gripper_status_commands"
     joint_state_topic: str = "joint_states"
-    open_close_state_topic: str = "open_close_state"
+    open_close_state_topic: str = "open_close_states"
     reboot_service: str = "reboot_gripper"
-    stop_service: str = "stop"
     enable_torque_service: str = "dynamixel_hardware_interface/set_dxl_torque"
     index: int = 0
     publish_frequency: float = 30.0
@@ -61,14 +61,17 @@ class GripperConfig:
             config_data = {
                 "min_value": config.get("min_value", 0.0),
                 "max_value": config.get("max_value", 1.0),
+                "action_command_topic": config.get(
+                    "command_topic", "gripper_position_controller/commands"
+                ),
                 "position_command_topic": config.get(
-                    "position_command_topic", "gripper_position_controller/commands"
+                    "position_command_topic", "gripper_position_commands"
                 ),
                 "status_command_topic": config.get(
-                    "status_command_topic", "gripper_status_controller/commands"
+                    "status_command_topic", "gripper_status_commands"
                 ),
                 "joint_state_topic": config.get("joint_state_topic", "joint_states"),
-                "open_close_state_topic": config.get("open_close_state_topic", "open_close_state"),
+                "open_close_state_topic": config.get("open_close_state_topic", "open_close_states"),
                 "reboot_service": config.get("reboot_service", "reboot_gripper"),
                 "stop_service": config.get("stop_service", "stop"),
                 "enable_torque_service": config.get(

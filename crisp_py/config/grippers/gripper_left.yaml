@@ -1,7 +1,8 @@
 joint_state_topic: /left/gripper/joint_states
-open_close_state_topic: /left/gripper/open_close_state
-position_command_topic: /left/gripper/gripper_position_controller/commands
-status_command_topic: /left/gripper/gripper_status_controller/commands
+open_close_state_topic: /left/gripper/open_close_states
+action_command_topic: /left/gripper/gripper_position_controller/commands
+position_command_topic: /left/gripper/gripper_position_commands
+status_command_topic: /left/gripper/gripper_status_commands
 
 max_value: 0.08
 min_value: 0.0
