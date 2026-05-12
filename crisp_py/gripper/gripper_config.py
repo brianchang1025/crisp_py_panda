@@ -29,6 +29,7 @@ class GripperConfig:
     max_joint_delay: float = 1.0
     max_delta: float = 0.1
     use_binary_status_control: bool = True
+    max_effort: float = 10.0
 
     @classmethod
     def from_yaml(cls, path: str | Path, **overrides) -> "GripperConfig":  # noqa: ANN003

@@ -54,7 +54,7 @@ class Robot:
         namespace: str = "",
         spin_node: bool = True,
         robot_config: RobotConfig | None = None,
-        name: str = "robot_client",
+        name: str = "crisp_py_robot_client",
     ) -> None:
         """Initialize the robot interface.
 

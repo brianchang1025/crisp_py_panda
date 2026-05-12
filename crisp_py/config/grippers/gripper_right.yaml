@@ -5,4 +5,7 @@ status_command_topic: /right/gripper/gripper_status_controller/commands
 
 max_value: 0.08
 min_value: 0.0
+
+namespace: right
+
 use_binary_status_control: true
