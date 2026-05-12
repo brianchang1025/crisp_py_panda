@@ -1,5 +1,5 @@
 joint_state_topic: /right/gripper/joint_states
-open_close_state_topic: /right/gripper/open_close_state
+open_close_state_topic: /right/gripper/open_close_states
 action_command_topic: /right/gripper/gripper_position_controller/commands
 position_command_topic: /right/gripper/gripper_position_commands
 status_command_topic: /right/gripper/gripper_status_commands
